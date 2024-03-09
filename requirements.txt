@@ -1,0 +1,5 @@
+Pillow
+pyautogui
+keyboard
+tkinter
+cx_Freeze
