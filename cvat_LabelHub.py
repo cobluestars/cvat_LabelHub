@@ -1,5 +1,9 @@
+# todo1: API를 이용해서 CVAT 작업 데이터를 DB.json으로 옮기는 작업 필요
+
+from pynput import keyboard
 import pyautogui
 import json
+import pyperclip
 from tkinter import *
 
 # 1. 라벨링 데이터 json 파일의 경로
@@ -16,6 +20,11 @@ except json.JSONDecodeError:
     print("db.json 파일 형식이 올바르지 않습니다.")
     exit()
 
+# todo2: 라벨링 데이터를 불러오는 로직 추가하기
+data = {
+    'a': "'a' 라벨에 해당하는 데이터 입력하기"
+}
+
 # 3. 키보드 매크로 함수
 def paste_label_data(label_name):
     """
@@ -23,32 +32,56 @@ def paste_label_data(label_name):
     """
 
     if label_name not in data:
+        print(f"Label '{label_name}' not found.")
         return
     
     data_to_paste = data[label_name]
 
-    # 클립보드에 데이터 복사 붙여넣기
-    pyautogui.write(data_to_paste)
-    pyautogui.hotkey('ctrl', 'c')
+    # 클립보드에 데이터 복사
+    pyperclip.copy(data_to_paste)
+
+    #붙여넣기
     pyautogui.hotkey('ctrl', 'v')
 
-# 4. 키 입력 이벤트 리스너 설정
-def on_key_press(event):
-    """
-    키 입력 이벤트를 감지하고 처리
+# 4. 키 입력 관련 설정
+# 현재 활성화된 조합키를 추적하기 위한 세트
+current_keys = set()
 
-    1, on_key_press(event) 함수는 키 입력 이벤트를 감지하고 처리
-    2. event.keysym 변수는 눌린 키의 이름을 나타냄
-    3. 왼쪽 Alt 키를 누르고 A를 누르면 label_name 변수에 "Alt_L+A"가 저장
-    4. "Alt_L+A"가 data dictionary에 존재하면 paste_label_data 함수가 호출되어 해당 라벨 데이터가 붙여넣기됨
-    """
+def on_press(key):
+    # 키가 눌렸을 때 실행되는 콜백 함수
+    try:
+        # key.char 속성을 사용해 일반 문자 키 확인
+        if key.char == 'a' and keyboard.Key.alt_l in current_keys:
+            #alt + a가 눌리면 실행할 함수
+            paste_label_data('a')
+        if key.char == 'b' and keyboard.Key.alt_l in current_keys:
+            paste_label_data('b')
+        if key.char == 'c' and keyboard.Key.alt_l in current_keys:
+            paste_label_data('c')
+        if key.char == 'd' and keyboard.Key.alt_l in current_keys:
+            paste_label_data('d')
+    except AttributeError:
+        #특수 키(조합 키)는 char 속성이 없으므로 여기에서 처리함.
+        if key == keyboard.Key.alt_l:
+            current_keys.add(key)
 
-    pressed_keys = event.keysym
+def on_release(key):
+    #키에서 손을 떼었을 때 실행되는 콜백 함수
+    try:
+        #눌려진 키를 추적하는 세트에서 제거
+        current_keys.remove(key)
+    except KeyError:
+        pass
 
-    if "Alt_L" in pressed_keys and len(pressed_keys) == 2:
-        label_name = pressed_keys
-        if label_name in data:
-            paste_label_data(label_name)
+    if key == keyboard.Key.esc:
+        #Esc 키를 누르면 리스너 중지
+        return False
+    
+# 리스너 등록
+with keyboard.Listener(
+        on_press=on_press,
+        on_release=on_release) as listener:
+    listener.join()
 
 # 5. 프로그램 UI 설정
 root = Tk()
